@@ -75,20 +75,20 @@ def main():
     ephem_map = {(row.body, row.date): row for _, row in ephem.iterrows()}
 
     fig, ax = plt.subplots(figsize=(13, 13))
-    ax.set_facecolor("#0d0d0d")
-    fig.patch.set_facecolor("#0d0d0d")
+    ax.set_facecolor("white")
+    fig.patch.set_facecolor("white")
 
     # Reference orbit circles
     theta = np.linspace(0, 2 * np.pi, 360)
     for body, r_au in ORBIT_RADII_AU.items():
         ax.plot(r_au * np.cos(theta), r_au * np.sin(theta),
-                color=BODY_COLORS[body], lw=0.6, alpha=0.18, zorder=1)
+                color=BODY_COLORS[body], lw=0.6, alpha=0.35, zorder=1)
 
     # Sun
     ax.plot(0, 0, "o", color="#FDB813", markersize=18, zorder=5,
-            markeredgecolor="#ffffff", markeredgewidth=0.4)
+            markeredgecolor="#444444", markeredgewidth=0.4)
     ax.annotate("Sun", (0, 0), xytext=(0.07, 0.07), textcoords="data",
-                fontsize=9, color="#FDB813", zorder=6)
+                fontsize=9, color="#b87c00", zorder=6)
 
     plotted_bodies = set()
 
@@ -124,22 +124,22 @@ def main():
                 c = BODY_COLORS.get(body, "#ffffff")
                 x_au, y_au = pos[0] / AU_KM, pos[1] / AU_KM
                 ax.plot(x_au, y_au, "o", color=c, markersize=9, zorder=7,
-                        markeredgecolor="#ffffff", markeredgewidth=0.5)
+                        markeredgecolor="#333333", markeredgewidth=0.5)
                 ax.annotate(f"{body}\n{date}", (x_au, y_au),
                             xytext=(9, 5), textcoords="offset points",
                             fontsize=8, color=c, zorder=8)
                 plotted_bodies.add((body, date))
 
-    ax.set_xlabel("X [AU]", color="#cccccc", fontsize=11)
-    ax.set_ylabel("Y [AU]", color="#cccccc", fontsize=11)
+    ax.set_xlabel("X [AU]", color="#222222", fontsize=11)
+    ax.set_ylabel("Y [AU]", color="#222222", fontsize=11)
     ax.set_title("Europa Mission — Lambert Transfer Arcs (Ecliptic Plane)",
-                 color="white", fontsize=13, pad=14)
+                 color="#111111", fontsize=13, pad=14)
     ax.set_aspect("equal")
-    ax.tick_params(colors="#888888")
+    ax.tick_params(colors="#444444")
     for spine in ax.spines.values():
-        spine.set_edgecolor("#333333")
-    ax.grid(True, color="#1e1e1e", linewidth=0.6)
-    ax.legend(facecolor="#1a1a1a", edgecolor="#444444", labelcolor="white",
+        spine.set_edgecolor("#aaaaaa")
+    ax.grid(True, color="#dddddd", linewidth=0.6)
+    ax.legend(facecolor="white", edgecolor="#aaaaaa", labelcolor="#111111",
               fontsize=10, loc="upper right")
 
     out_path = PROJECT_ROOT / "outputs" / "lambert_transfers.png"

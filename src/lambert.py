@@ -11,7 +11,7 @@ Supported elliptic transfer classes:
     2A: transfer angle > 180 deg, short-period ellipse
     2B: transfer angle > 180 deg, long-period ellipse
 
-Lecture mapping:
+Mapping: 
     Type 1 = transfer angle < 180 deg
     Type 2 = transfer angle > 180 deg
     A      = smaller time of flight branch
@@ -95,8 +95,7 @@ def solve_lambert(
         )
 
     # ------------------------------------------------------------------
-    # Lecture 19 Step 1:
-    # Determine the space triangle: r1, r2, chord c, semi-perimeter s.
+    # Determine the space triangle
     # ------------------------------------------------------------------
 
     r1 = np.linalg.norm(r1_vec)
@@ -112,7 +111,6 @@ def solve_lambert(
     s = 0.5 * (r1 + r2 + c)
 
     # Minimum possible semi-major axis for an elliptic transfer.
-    # Lecture notation: a_min = s / 2.
     a_min = 0.5 * s
 
     # ------------------------------------------------------------------
@@ -132,17 +130,7 @@ def solve_lambert(
         sin_phi = -sin_phi_mag
 
     # ------------------------------------------------------------------
-    # Lecture 19 Step 2:
     # Calculate parabolic TOF.
-    #
-    # For Type 1:
-    #   TOF_p = (1/3) * sqrt(2/mu) * [s^(3/2) - (s-c)^(3/2)]
-    #
-    # For Type 2:
-    #   TOF_p = (1/3) * sqrt(2/mu) * [s^(3/2) + (s-c)^(3/2)]
-    #
-    # If TOF < TOF_p, the transfer would be hyperbolic.
-    # This solver only handles elliptic transfers.
     # ------------------------------------------------------------------
 
     tof_parabolic = _tof_parabolic(s, c, mu, transfer_type)
@@ -155,7 +143,6 @@ def solve_lambert(
         )
 
     # ------------------------------------------------------------------
-    # Lecture 19:
     # A/B branch decision.
     #
     # At a = a_min, alpha_0 = pi.
@@ -166,8 +153,6 @@ def solve_lambert(
     #
     # Type B exists for:
     #   TOF >= TOF_min_energy
-    #
-    # This is exactly why Earth->Mars is 1A while Mars->Earth is 1B.
     # ------------------------------------------------------------------
 
     tof_min_energy = _tof_elliptic(a_min * (1.0 + 1e-12), s, c, mu, transfer_type)
@@ -191,43 +176,22 @@ def solve_lambert(
         )
 
     # ------------------------------------------------------------------
-    # Lecture 19 Step 6:
+    # 
     # Iterate on a in Lambert's equation.
-    #
-    # For A branches:
-    #   TOF decreases from TOF_min_energy toward TOF_parabolic as a grows.
-    #
-    # For B branches:
-    #   TOF increases from TOF_min_energy as a grows.
-    #
-    # Each branch is monotonic, so bisection works.
     # ------------------------------------------------------------------
 
-    if branch == "A":
-        a = _bisect_a_type_A(
-            tof=tof,
-            a_min=a_min,
-            s=s,
-            c=c,
-            mu=mu,
-            transfer_type=transfer_type,
-            tol=tol,
-            max_iter=max_iter,
-        )
-    else:
-        a = _bisect_a_type_B(
-            tof=tof,
-            a_min=a_min,
-            s=s,
-            c=c,
-            mu=mu,
-            transfer_type=transfer_type,
-            tol=tol,
-            max_iter=max_iter,
-        )
+    a = _bisect_a(
+        tof=tof,
+        a_min=a_min,
+        s=s,
+        c=c,
+        mu=mu,
+        transfer_type=transfer_type,
+        tol=tol,
+        max_iter=max_iter,
+    )
 
     # ------------------------------------------------------------------
-    # Lecture 19 Step 5:
     # Calculate alpha and beta with quadrant rules.
     #
     # First compute alpha_0 and beta_0.
@@ -242,22 +206,15 @@ def solve_lambert(
     alpha, beta = _alpha_beta(a, s, c, transfer_type)
 
     # ------------------------------------------------------------------
-    # Lecture 19 Step 7:
     # Find p and e.
     #
     # p = [4a(s-r1)(s-r2)/c^2] * sin^2((alpha ± beta)/2)
     #
-    # Sign convention from Lecture 19:
-    #   1B and 2A -> plus sign
-    #   1A and 2B -> minus sign
+    # Quadrant corrections on alpha/beta already encode the ± convention,
+    # so alpha−beta gives the correct sin² argument for all transfer types.
     # ------------------------------------------------------------------
 
-    if transfer_type in {"1A", "2B"}:
-        p_angle = 0.5 * (alpha + beta)
-    else:
-        p_angle = 0.5 * (alpha - beta)
-
-    p = (4.0 * a * (s - r1) * (s - r2) / c**2) * math.sin(p_angle) ** 2
+    p = (4.0 * a * (s - r1) * (s - r2) / c**2) * math.sin(0.5 * (alpha + beta)) ** 2
 
     if p <= 0:
         raise RuntimeError(f"Computed invalid p = {p}. Check transfer type/geometry.")
@@ -267,8 +224,6 @@ def solve_lambert(
     # ------------------------------------------------------------------
     # Compute velocity vectors using Lagrange f and g coefficients.
     #
-    # This is equivalent to the velocity-vector step in the lecture, but
-    # easier to implement robustly in vector form.
     # ------------------------------------------------------------------
 
     f = 1.0 - (r2 / p) * (1.0 - cos_phi)
@@ -343,7 +298,7 @@ def _tof_elliptic(
 
 def _tof_parabolic(s: float, c: float, mu: float, transfer_type: str) -> float:
     """
-    Parabolic time of flight from Lecture 19.
+    Parabolic time of flight
 
     Type 1:
         TOF_p = (1/3) sqrt(2/mu) [s^(3/2) - (s-c)^(3/2)]
@@ -360,7 +315,7 @@ def _tof_parabolic(s: float, c: float, mu: float, transfer_type: str) -> float:
     return base * (s**1.5 + (s - c) ** 1.5)
 
 
-def _bisect_a_type_A(
+def _bisect_a(
     tof: float,
     a_min: float,
     s: float,
@@ -371,22 +326,19 @@ def _bisect_a_type_A(
     max_iter: int,
 ) -> float:
     """
-    Bisection for Type A branches.
+    Bisection for any transfer type.Monotonicity of TOF(a) differs by branch (A decreases, B increases).
 
-    Type A TOF decreases as a increases:
-        at a_min: TOF = TOF_min_energy
-        as a -> infinity: TOF -> TOF_parabolic
     """
 
     a_lo = a_min * (1.0 + 1e-12)
     a_hi = a_min * 2.0
+    tof_lo = _tof_elliptic(a_lo, s, c, mu, transfer_type)
 
-    # Expand upper bound until the Type A TOF is below target.
-    while _tof_elliptic(a_hi, s, c, mu, transfer_type) > tof:
+    # Expand upper bound until target TOF is bracketed.
+    while (tof_lo - tof) * (_tof_elliptic(a_hi, s, c, mu, transfer_type) - tof) > 0:
         a_hi *= 2.0
-
         if a_hi > 1e16:
-            raise RuntimeError("Could not bracket Type A Lambert solution.")
+            raise RuntimeError("Could not bracket Lambert solution.")
 
     for _ in range(max_iter):
         a_mid = 0.5 * (a_lo + a_hi)
@@ -395,53 +347,9 @@ def _bisect_a_type_A(
         if abs(tof_mid - tof) < tol:
             return a_mid
 
-        # Type A is decreasing in a.
-        if tof_mid > tof:
-            a_lo = a_mid
-        else:
-            a_hi = a_mid
-
-    return a_mid
-
-
-def _bisect_a_type_B(
-    tof: float,
-    a_min: float,
-    s: float,
-    c: float,
-    mu: float,
-    transfer_type: str,
-    tol: float,
-    max_iter: int,
-) -> float:
-    """
-    Bisection for Type B branches.
-
-    Type B TOF increases as a increases:
-        at a_min: TOF = TOF_min_energy
-        as a grows: TOF grows
-    """
-
-    a_lo = a_min * (1.0 + 1e-12)
-    a_hi = a_min * 2.0
-
-    # Expand upper bound until the Type B TOF exceeds target.
-    while _tof_elliptic(a_hi, s, c, mu, transfer_type) < tof:
-        a_hi *= 2.0
-
-        if a_hi > 1e16:
-            raise RuntimeError("Could not bracket Type B Lambert solution.")
-
-    for _ in range(max_iter):
-        a_mid = 0.5 * (a_lo + a_hi)
-        tof_mid = _tof_elliptic(a_mid, s, c, mu, transfer_type)
-
-        if abs(tof_mid - tof) < tol:
-            return a_mid
-
-        # Type B is increasing in a.
-        if tof_mid < tof:
-            a_lo = a_mid
+        # Move the bound on the same side of the target as mid.
+        if (tof_mid - tof) * (tof_lo - tof) > 0:
+            a_lo, tof_lo = a_mid, tof_mid
         else:
             a_hi = a_mid
 
