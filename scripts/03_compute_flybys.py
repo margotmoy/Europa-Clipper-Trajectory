@@ -49,6 +49,14 @@ def vec_from_row(row: pd.Series, prefix: str) -> np.ndarray:
     )
 
 
+def helio_vel_from_row(row: pd.Series, endpoint: str) -> np.ndarray:
+    """Return heliocentric spacecraft velocity at start ('v1') or end ('v2') of a leg."""
+    return np.array(
+        [row[f"{endpoint}x_km_s"], row[f"{endpoint}y_km_s"], row[f"{endpoint}z_km_s"]],
+        dtype=float,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--flyby", default=None, help="Example: Mars")
@@ -74,6 +82,7 @@ def main() -> None:
         body = BODY_DATA[flyby_body]
 
         vinf_in = vec_from_row(incoming, "vinf_arrive")
+        v_sc_arrive = helio_vel_from_row(incoming, "v2")
 
         outgoing_matches = transfers[
             (transfers["start_body"] == flyby_body) &
@@ -86,6 +95,7 @@ def main() -> None:
         outgoing = outgoing_matches.iloc[0]
         outgoing_leg = outgoing["leg"]
         vinf_out_required = vec_from_row(outgoing, "vinf_depart")
+        v_sc_depart = helio_vel_from_row(outgoing, "v1")
 
         summary = compute_flyby(
             vinf_in=vinf_in,
@@ -93,6 +103,9 @@ def main() -> None:
             mu=body["mu"],
             body_radius=body["radius"],
         )
+
+        dv_helio = v_sc_depart - v_sc_arrive
+        dv_helio_mag = np.linalg.norm(dv_helio)
 
         rows.append({
             "flyby_body": flyby_body,
@@ -103,6 +116,10 @@ def main() -> None:
             "vinf_in_y_km_s": vinf_in[1],
             "vinf_in_z_km_s": vinf_in[2],
             **summary,
+            "dv_helio_x_km_s": dv_helio[0],
+            "dv_helio_y_km_s": dv_helio[1],
+            "dv_helio_z_km_s": dv_helio[2],
+            "dv_helio_mag_km_s": dv_helio_mag,
         })
 
         print(f"\nFlyby: {flyby_body}")
@@ -113,6 +130,7 @@ def main() -> None:
         print(f"  required turn:  {summary['required_turn_deg']:.3f} deg")
         print(f"  required alt:   {summary['required_altitude_km']:.1f} km")
         print(f"  v_inf mismatch: {summary['vinf_mag_mismatch_km_s']:.6f} km/s")
+        print(f"  dv heliocentric: {dv_helio_mag:.4f} km/s  [{dv_helio[0]:+.4f}, {dv_helio[1]:+.4f}, {dv_helio[2]:+.4f}]")
 
         print(f"\n  [debug] v_inf in  (from {incoming['leg']} arrival):  "
               f"[{vinf_in[0]:+.4f}, {vinf_in[1]:+.4f}, {vinf_in[2]:+.4f}] km/s  "

@@ -1,31 +1,56 @@
+"""
+Jupiter Orbit Insertion delta-v calculation.
+
+Run with defaults:
+    python scripts/05_compute_orbital_insertion
+
+Override any parameter:
+    python scripts/05_compute_orbital_insertion --v-inf 6.2 --rp-rj 10.0 --ra-rj 200.0
+"""
+
 import math
+import argparse
+from pathlib import Path
+import sys
 
-mu = 1.26686534e8      # Jupiter gravitational parameter [km^3/s^2]
-r_p = 11.25 * 71492    # Periapsis radius [km] (11.25 Rj)
-v_inf = 5.9            # Incoming hyperbolic excess velocity [km/s]
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(PROJECT_ROOT))
 
-# Target orbit parameters
-r_a = 264.5 * 71492    # Apoapsis radius [km] (set = r_p for circular)
+from src.constants import MU_JUPITER, R_JUPITER
 
-# Semi-major axis of target orbit
-a = (r_p + r_a) / 2
 
-# Velocity at periapsis (hyperbolic arrival)
-v_peri_hyp = math.sqrt(v_inf**2 + (2 * mu) / r_p)
+def parse_args():
+    p = argparse.ArgumentParser(description="Jupiter Orbit Insertion delta-v")
+    p.add_argument("--v-inf",  type=float, default=5.9,   help="Hyperbolic excess speed at Jupiter [km/s]")
+    p.add_argument("--rp-rj",  type=float, default=11.25, help="Periapsis radius [R_J]")
+    p.add_argument("--ra-rj",  type=float, default=264.5, help="Apoapsis radius [R_J]")
+    return p.parse_args()
 
-# Velocity at periapsis (desired orbit)
-v_peri_ell = math.sqrt(mu * (2 / r_p - 1 / a))
 
-# Delta-v required for capture
-delta_v = v_peri_hyp - v_peri_ell
+def main():
+    args = parse_args()
 
-print("=== Jupiter Orbit Insertion Calculation ===")
-print(f"Periapsis radius (km): {r_p:.2f}")
-print(f"Apoapsis radius (km): {r_a:.2f}")
-print(f"Semi-major axis (km): {a:.2f}")
-print(f"Incoming v_inf (km/s): {v_inf:.3f}")
-print("------------------------------------------")
-print(f"Hyperbolic periapsis velocity (km/s): {v_peri_hyp:.3f}")
-print(f"Target orbit periapsis velocity (km/s): {v_peri_ell:.3f}")
-print("------------------------------------------")
-print(f"Required Delta-v for capture (km/s): {delta_v:.3f}")
+    r_p = args.rp_rj * R_JUPITER
+    r_a = args.ra_rj * R_JUPITER
+    v_inf = args.v_inf
+
+    a = (r_p + r_a) / 2
+
+    v_peri_hyp = math.sqrt(v_inf**2 + 2 * MU_JUPITER / r_p)
+    v_peri_ell = math.sqrt(MU_JUPITER * (2 / r_p - 1 / a))
+    delta_v = v_peri_hyp - v_peri_ell
+
+    print("=== Jupiter Orbit Insertion Calculation ===")
+    print(f"Periapsis radius (km):                {r_p:.2f}  ({args.rp_rj} R_J)")
+    print(f"Apoapsis radius (km):                 {r_a:.2f}  ({args.ra_rj} R_J)")
+    print(f"Semi-major axis (km):                 {a:.2f}")
+    print(f"Incoming v_inf (km/s):                {v_inf:.3f}")
+    print("------------------------------------------")
+    print(f"Hyperbolic periapsis velocity (km/s): {v_peri_hyp:.3f}")
+    print(f"Target orbit periapsis velocity (km/s): {v_peri_ell:.3f}")
+    print("------------------------------------------")
+    print(f"Required Delta-v for capture (km/s):  {delta_v:.3f}")
+
+
+if __name__ == "__main__":
+    main()
