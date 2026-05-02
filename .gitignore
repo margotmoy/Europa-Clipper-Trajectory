@@ -1,0 +1,9 @@
+venv/
+
+# Generated data
+data/processed_states/
+data/figures/
+data/verification/
+
+# macOS
+.DS_Store
