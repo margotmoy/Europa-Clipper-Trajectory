@@ -142,7 +142,7 @@ def main():
     ax.legend(facecolor="white", edgecolor="#aaaaaa", labelcolor="#111111",
               fontsize=10, loc="upper right")
 
-    out_path = PROJECT_ROOT / "outputs" / "lambert_transfers.png"
+    out_path = PROJECT_ROOT / "data" / "figures" / "lambert_transfers.png"
     plt.savefig(out_path, dpi=150, bbox_inches="tight",
                 facecolor=fig.get_facecolor())
     print(f"Saved to {out_path}")

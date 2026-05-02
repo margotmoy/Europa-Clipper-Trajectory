@@ -1,0 +1,31 @@
+import math
+
+mu = 1.26686534e8      # Jupiter gravitational parameter [km^3/s^2]
+r_p = 11.25 * 71492    # Periapsis radius [km] (11.25 Rj)
+v_inf = 5.9            # Incoming hyperbolic excess velocity [km/s]
+
+# Target orbit parameters
+r_a = 264.5 * 71492    # Apoapsis radius [km] (set = r_p for circular)
+
+# Semi-major axis of target orbit
+a = (r_p + r_a) / 2
+
+# Velocity at periapsis (hyperbolic arrival)
+v_peri_hyp = math.sqrt(v_inf**2 + (2 * mu) / r_p)
+
+# Velocity at periapsis (desired orbit)
+v_peri_ell = math.sqrt(mu * (2 / r_p - 1 / a))
+
+# Delta-v required for capture
+delta_v = v_peri_hyp - v_peri_ell
+
+print("=== Jupiter Orbit Insertion Calculation ===")
+print(f"Periapsis radius (km): {r_p:.2f}")
+print(f"Apoapsis radius (km): {r_a:.2f}")
+print(f"Semi-major axis (km): {a:.2f}")
+print(f"Incoming v_inf (km/s): {v_inf:.3f}")
+print("------------------------------------------")
+print(f"Hyperbolic periapsis velocity (km/s): {v_peri_hyp:.3f}")
+print(f"Target orbit periapsis velocity (km/s): {v_peri_ell:.3f}")
+print("------------------------------------------")
+print(f"Required Delta-v for capture (km/s): {delta_v:.3f}")
